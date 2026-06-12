@@ -382,6 +382,14 @@ let DATA_SOURCE='', PPI_SOURCE='', chartInstances={};
 // ──────────────────────────────────────────────────────────
 function openSettings(){const m=document.getElementById('settingsModal');if(m)m.classList.add('open');}
 function closeSettings(){const m=document.getElementById('settingsModal');if(m)m.classList.remove('open');}
+// Restored general helpers (were defined in the old data layer that was replaced).
+function fmtPct(v){return(v>=0?'+':'')+v.toFixed(2)+'%';}
+function showSection(id,el){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const sec=document.getElementById('sec-'+id); if(sec) sec.classList.add('active');
+  if(el) el.classList.add('active');
+}
 // ── PARSE ─────────────────────────────────────────────────
 function monthIdx(label){
   const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
