@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CPI / PPI Monthly Intelligence Report</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg:#0d0f12;--surface:#13161b;--surface2:#1a1e25;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
+  --text:#e8eaf0;--muted:#7a8299;--muted2:#545d72;
+  --accent:#f0c040;--red:#e05555;--green:#3dba7a;--blue:#4a9eff;--orange:#f07840;
+  --serif:'DM Serif Display',Georgia,serif;
+  --mono:'DM Mono',monospace;
+  --sans:'Inter',system-ui,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.6;min-height:100vh}
+.app{display:flex;min-height:100vh}
+.sidebar{width:220px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100}
+.main{margin-left:220px;flex:1;padding:40px 48px;max-width:1200px}
+.sidebar-logo{padding:28px 24px 20px;border-bottom:1px solid var(--border)}
+.sidebar-logo .eyebrow{font-size:9px;font-weight:600;letter-spacing:.15em;color:var(--accent);text-transform:uppercase;margin-bottom:4px}
+.sidebar-logo h1{font-family:var(--serif);font-size:17px;color:var(--text);line-height:1.25}
+.sidebar-nav{padding:16px 0;flex:1}
+.nav-section-label{font-size:9px;font-weight:600;letter-spacing:.12em;color:var(--muted2);text-transform:uppercase;padding:8px 24px 4px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 24px;color:var(--muted);font-size:12.5px;cursor:pointer;border-left:2px solid transparent;transition:all .15s;text-decoration:none}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,.03)}
+.nav-item.active{color:var(--accent);border-left-color:var(--accent);background:rgba(240,192,64,.05);font-weight:500}
+.nav-icon{width:14px;text-align:center;font-size:13px}
+.sidebar-footer{padding:16px 24px;border-top:1px solid var(--border)}
+.refresh-btn{width:100%;padding:10px 0;background:var(--accent);color:#0d0f12;border:none;border-radius:6px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;transition:background .15s,opacity .15s}
+.refresh-btn:hover{background:#f5d060}
+.refresh-btn:disabled{opacity:.5;cursor:not-allowed}
+.export-btn{width:100%;padding:9px 0;margin-top:8px;background:transparent;color:var(--muted);border:1px solid var(--border2);border-radius:6px;font-family:var(--sans);font-size:11.5px;font-weight:500;cursor:pointer;transition:all .15s}
+.export-btn:hover{border-color:var(--accent);color:var(--accent)}
+.last-updated{font-size:10px;color:var(--muted2);text-align:center;margin-top:10px;line-height:1.6}
+.clear-cache{font-size:10px;color:var(--blue);cursor:pointer;background:none;border:none;font-family:var(--sans);padding:0;display:block;margin:3px auto 0;text-decoration:underline}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:12px;width:520px;padding:32px;max-height:90vh;overflow-y:auto}
+.modal h2{font-family:var(--serif);font-size:22px;margin-bottom:6px}
+.modal p{color:var(--muted);font-size:12.5px;margin-bottom:20px;line-height:1.6}
+.field-label{font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:6px}
+.field-input{width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;color:var(--text);font-family:var(--mono);font-size:12px;margin-bottom:16px;outline:none;transition:border-color .15s}
+.field-input:focus{border-color:var(--accent)}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.btn-secondary{padding:9px 18px;background:transparent;border:1px solid var(--border2);border-radius:6px;color:var(--muted);font-size:12px;cursor:pointer;font-family:var(--sans)}
+.btn-primary{padding:9px 18px;background:var(--accent);color:#0d0f12;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans)}
+.info-box{background:rgba(74,158,255,.08);border:1px solid rgba(74,158,255,.2);border-radius:6px;padding:10px 12px;font-size:11px;color:var(--blue);margin-bottom:16px;line-height:1.6}
+.warn-box{background:rgba(240,192,64,.08);border:1px solid rgba(240,192,64,.2);border-radius:6px;padding:10px 12px;font-size:11px;color:var(--accent);margin-bottom:16px;line-height:1.6}
+.section{display:none}
+.section.active{display:block}
+.section-header{margin-bottom:32px}
+.section-eyebrow{font-size:10px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+.section-title{font-family:var(--serif);font-size:32px;color:var(--text);line-height:1.1}
+.section-subtitle{color:var(--muted);font-size:13px;margin-top:6px}
+.report-meta{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
+.meta-pill{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:11px;color:var(--muted);font-family:var(--mono)}
+.meta-pill.cached{border-color:rgba(61,186,122,.3);color:var(--green);background:rgba(61,186,122,.07)}
+.meta-pill.live{border-color:rgba(74,158,255,.3);color:var(--blue);background:rgba(74,158,255,.07)}
+.meta-pill.est{border-color:rgba(240,120,64,.35);color:var(--orange);background:rgba(240,120,64,.08)}
+.loading-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 0;gap:16px}
+.spinner{width:36px;height:36px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{color:var(--muted);font-size:13px}
+.loading-step{font-size:11px;color:var(--muted2);font-family:var(--mono)}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;position:relative;overflow:hidden}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kpi-card.hot::before{background:var(--red)}
+.kpi-card.warm::before{background:var(--orange)}
+.kpi-card.cool::before{background:var(--blue)}
+.kpi-card.good::before{background:var(--green)}
+.kpi-label{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.kpi-value{font-family:var(--mono);font-size:26px;font-weight:500;color:var(--text);line-height:1}
+.kpi-delta{display:flex;align-items:center;gap:5px;margin-top:8px;font-size:11px}
+.delta-up{color:var(--red)}.delta-down{color:var(--green)}.delta-flat{color:var(--muted)}
+.kpi-sub{font-size:10.5px;color:var(--muted2);margin-top:4px}
+.ai-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;margin-bottom:28px}
+.ai-box-header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.ai-badge{background:rgba(240,192,64,.1);border:1px solid rgba(240,192,64,.25);border-radius:4px;padding:2px 8px;font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--accent);text-transform:uppercase}
+.ai-box-title{font-size:12px;font-weight:500;color:var(--muted)}
+.ai-content{font-size:13.5px;color:var(--text);line-height:1.8}
+.ai-content p{margin-bottom:10px}
+.ai-content p:last-child{margin-bottom:0}
+.ai-loading{color:var(--muted);font-size:13px;display:flex;align-items:center;gap:8px}
+.ai-error{color:var(--orange);font-size:12px}
+.table-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:24px}
+.table-card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);gap:12px}
+.table-card-title{font-size:13px;font-weight:600;color:var(--text)}
+.table-card-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.tab-pills{display:flex;gap:4px;flex-shrink:0}
+.tab-pill{padding:5px 12px;border-radius:4px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--border2);color:var(--muted);background:transparent;font-family:var(--sans);transition:all .15s}
+.tab-pill.active{background:var(--accent);color:#0d0f12;border-color:var(--accent)}
+.data-table{width:100%;border-collapse:collapse}
+.data-table th{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2);padding:10px 20px;text-align:left;background:var(--surface2);border-bottom:1px solid var(--border)}
+.data-table th.r{text-align:right}
+.data-table td{padding:11px 20px;border-bottom:1px solid var(--border);font-size:12.5px;color:var(--text);vertical-align:middle}
+.data-table td.r{text-align:right;font-family:var(--mono);font-size:12px}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:rgba(255,255,255,.02)}
+.rank-num{color:var(--muted2);font-family:var(--mono);font-size:11px}
+.comp-name{font-weight:500;font-size:12.5px}
+.comp-cat{font-size:10.5px;color:var(--muted);margin-top:1px}
+.change-pos-hi{color:#f07070;font-weight:600}
+.change-pos-md{color:var(--orange);font-weight:500}
+.change-pos-lo{color:var(--blue)}
+.change-neg{color:var(--green)}
+.impact-pos-hi{color:#f07070;font-weight:600;font-family:var(--mono)}
+.impact-pos-md{color:var(--orange);font-weight:500;font-family:var(--mono)}
+.impact-pos-lo{color:var(--blue);font-family:var(--mono)}
+.impact-neg{color:var(--green);font-family:var(--mono)}
+.wt-val{color:var(--muted);font-family:var(--mono);font-size:11px}
+.bar-cell{width:100px}
+.bar-bg{background:rgba(255,255,255,.07);border-radius:2px;height:4px}
+.bar-fill{height:100%;border-radius:2px}
+.new-acc-flag{font-size:9px;color:var(--accent);margin-left:5px}
+.prev-val{font-size:10.5px;color:var(--muted2);font-family:var(--mono)}
+.divider-row td{background:var(--surface2);color:var(--muted2);font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:6px 20px;border-bottom:1px solid var(--border)}
+.spark-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px}
+.spark-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px}
+.spark-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+.spark-name{font-size:12px;font-weight:600;color:var(--text)}
+.spark-cat{font-size:10px;color:var(--muted);margin-top:2px}
+.spark-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:3px;font-family:var(--mono);white-space:nowrap}
+.spark-badge.red{background:rgba(224,85,85,.15);color:var(--red)}
+.spark-badge.orange{background:rgba(240,120,64,.15);color:var(--orange)}
+.spark-badge.blue{background:rgba(74,158,255,.15);color:var(--blue)}
+.spark-badge.green{background:rgba(61,186,122,.15);color:var(--green)}
+.spark-canvas-wrap{position:relative;height:60px;margin-bottom:12px}
+.spark-stats{display:flex;gap:16px}
+.spark-stat-label{font-size:9.5px;color:var(--muted2);text-transform:uppercase;letter-spacing:.08em}
+.spark-stat-val{font-family:var(--mono);font-size:13px;font-weight:500;margin-top:1px}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;margin-bottom:24px}
+.chart-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+.chart-title{font-size:13px;font-weight:600;color:var(--text)}
+.chart-legend{display:flex;gap:16px;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+.legend-line{width:20px;height:2px;border-radius:1px}
+.chart-wrap{position:relative;height:240px}
+.watch-list{display:flex;flex-direction:column;gap:10px}
+.watch-item{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px 18px;display:flex;align-items:center;gap:16px}
+.watch-item.alert{border-color:rgba(240,192,64,.3);background:rgba(240,192,64,.04)}
+.watch-icon{font-size:16px;flex-shrink:0}
+.watch-body{flex:1;min-width:0}
+.watch-name{font-size:13px;font-weight:500;color:var(--text)}
+.watch-reason{font-size:11.5px;color:var(--muted);margin-top:2px}
+.watch-stat{text-align:right;flex-shrink:0}
+.watch-change{font-family:var(--mono);font-size:14px;font-weight:600}
+.watch-prev{font-size:10.5px;color:var(--muted2);font-family:var(--mono);margin-top:2px}
+.watch-runrate{display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;min-width:78px;border-left:1px solid var(--border);padding-left:14px}
+.watch-rr-label{font-size:8.5px;color:var(--muted2);text-transform:uppercase;letter-spacing:.07em}
+.watch-rr-val{font-family:var(--mono);font-size:13px;font-weight:600;margin-top:1px}
+.empty-state{text-align:center;padding:60px 0;color:var(--muted);font-size:13px}
+.error-banner{background:rgba(224,85,85,.1);border:1px solid rgba(224,85,85,.2);border-radius:8px;padding:16px 20px;color:var(--red);font-size:13px;margin-bottom:20px;line-height:1.7}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn .3s ease forwards}
+.exec-takeaway{background:linear-gradient(90deg,rgba(240,192,64,.10),rgba(240,192,64,.02));border:1px solid rgba(240,192,64,.25);border-left:3px solid var(--accent);border-radius:8px;padding:14px 18px;margin-bottom:24px;display:flex;gap:14px;align-items:flex-start}
+.exec-takeaway .et-label{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);white-space:nowrap;padding-top:3px}
+.exec-takeaway .et-text{font-size:13.5px;color:var(--text);line-height:1.6}
+.exec-takeaway .et-text b{color:var(--accent);font-weight:600}
+.quick-links{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 4px}
+.quick-link{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:6px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:11px;font-weight:500;text-decoration:none;transition:all .15s}
+.quick-link:hover{border-color:var(--accent);color:var(--accent)}
+.footnote{font-size:10px;color:var(--muted2);line-height:1.7;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)}
+.footnote b{color:var(--muted);font-weight:600}
+.adj-tag{font-size:8.5px;font-weight:600;letter-spacing:.05em;padding:1px 5px;border-radius:3px;background:rgba(255,255,255,.06);color:var(--muted2);margin-left:6px;vertical-align:middle}
+.adj-tag.nsa{color:var(--orange);background:rgba(240,120,64,.10)}
+/* Articles */
+.articles-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:24px}
+.articles-card-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.articles-card-title{font-size:13px;font-weight:600;color:var(--text)}
+.articles-card-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.feed-block{padding:14px 18px;border-bottom:1px solid var(--border)}
+.feed-block:last-child{border-bottom:none}
+.feed-name{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+.article-item{margin-bottom:9px;padding-bottom:9px;border-bottom:1px solid var(--border)}
+.article-item:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none}
+.article-link{font-size:12px;font-weight:500;color:var(--text);text-decoration:none;line-height:1.4;display:block}
+.article-link:hover{color:var(--accent)}
+.article-meta{font-size:10px;color:var(--muted2);margin-top:3px;font-family:var(--mono)}
+.articles-loading{padding:20px 18px;color:var(--muted);font-size:12px;display:flex;align-items:center;gap:8px}
+.feed-error{font-size:10.5px;color:var(--muted2);font-style:italic;padding:10px 18px;border-top:1px solid var(--border)}
+/* Tire grid */
+.tire-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
+/* Fed rate sparkline */
+.rate-sparkline-row{display:flex;justify-content:space-between;font-size:10px;color:var(--muted2);font-family:var(--mono);margin-top:3px}
+@media print{
+  .sidebar{display:none}.main{margin-left:0;padding:20px;max-width:none}
+  .section{display:block!important;page-break-before:always}
+  .section:first-of-type{page-break-before:avoid}
+  .chart-card,.table-card,.ai-box,.kpi-card,.spark-card,.articles-card,.exec-takeaway,.watch-item{break-inside:avoid;page-break-inside:avoid}
+  .tab-pills,.quick-links{display:none!important}
+  body{background:#fff;color:#111}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="eyebrow">Monthly Intelligence</div>
+    <h1>CPI / PPI<br/>Report</h1>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Report</div>
+    <a class="nav-item active" onclick="showSection('cpi',this)"><span class="nav-icon">&#9672;</span>CPI Summary</a>
+    <a class="nav-item" onclick="showSection('ppi',this)"><span class="nav-icon">&#9709;</span>PPI Summary</a>
+    <a class="nav-item" onclick="showSection('lens',this)"><span class="nav-icon">&#9673;</span>Industry Lens</a>
+    <a class="nav-item" onclick="showSection('trend',this)"><span class="nav-icon">&#9676;</span>12-Month Trends</a>
+    <div class="nav-section-label" style="margin-top:12px">Info</div>
+    <a class="nav-item" onclick="openSettings()"><span class="nav-icon">&#9881;</span>Data Source</a>
+  </nav>
+  <div class="sidebar-footer">
+    <button class="refresh-btn" id="refreshBtn" onclick="forceRefresh()">&#8635; Refresh Data</button>
+    <button class="export-btn" onclick="window.print()">&#11015; Export PDF</button>
+    <div class="last-updated" id="lastUpdated">Loading&hellip;</div>
+  </div>
+</aside>
+
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <h2>Data Source</h2>
+    <p>This dashboard reads a single file, <b>data.json</b>, served next to this page.</p>
+    <div class="info-box">&#128202; <b>data.json</b> is rebuilt on a schedule by a GitHub Action (<span style="font-family:var(--mono)">scripts/fetch_data.py</span>) that pulls CPI &amp; PPI from <b>BLS</b> and the Fed Funds rate from <b>FRED</b>. BLS and FRED keys live as encrypted GitHub repo secrets &mdash; never in your browser. The page makes no cross-origin API calls, so there is no CORS dependency.</div>
+    <div class="field-label" style="margin-top:4px">How it refreshes</div>
+    <p style="margin-bottom:14px">The Action runs automatically (and can be triggered manually from the repo's <b>Actions</b> tab). When BLS or FRED publishes new figures, the next run updates data.json and the dashboard picks it up on reload &mdash; click <b>Refresh Data</b> any time to re-read the latest file.</p>
+    <div class="warn-box">&#9888; If a scheduled pull fails, the dashboard shows <b>Data Pull Failed (E###)</b> with a numbered code instead of estimated or stale figures. Codes are documented in the repo README.</div>
+    <div class="modal-actions" style="margin-top:20px">
+      <button class="btn-primary" onclick="closeSettings()">Close</button>
+    </div>
+  </div>
+</div>
+
+<main class="main">
+  <section class="section active" id="sec-cpi">
+    <div class="section-header">
+      <div class="section-eyebrow">Consumer Price Index</div>
+      <h2 class="section-title" id="cpiTitle">CPI Summary</h2>
+      <div class="report-meta" id="cpiMeta"></div>
+    </div>
+    <div id="cpiSummaryContent">
+      <div class="loading-state"><div class="spinner"></div><div class="loading-text">Initializing&hellip;</div><div class="loading-step" id="loadStep">Loading data&hellip;</div></div>
+    </div>
+  </section>
+
+  <section class="section" id="sec-ppi">
+    <div class="section-header">
+      <div class="section-eyebrow">Producer Price Index</div>
+      <h2 class="section-title" id="ppiTitle">PPI Summary</h2>
+      <div class="report-meta" id="ppiMeta"></div>
+    </div>
+    <div id="ppiSummaryContent"><div class="empty-state">Load data to see producer-price analysis</div></div>
+  </section>
+
+  <section class="section" id="sec-lens">
+    <div class="section-header">
+      <div class="section-eyebrow">Manufacturing &amp; Transportation</div>
+      <h2 class="section-title">Industry Lens</h2>
+      <div class="section-subtitle">Consumer-side cost exposure, producer-side input costs, tire &amp; auto intelligence, and a momentum / early-warning board.</div>
+    </div>
+    <div id="lensContent"><div class="empty-state">Load data to see analysis</div></div>
+  </section>
+
+  <section class="section" id="sec-trend">
+    <div class="section-header">
+      <div class="section-eyebrow">Historical Context</div>
+      <h2 class="section-title">12-Month Trends</h2>
+      <div class="section-subtitle">Year-over-year trajectory and component history for both CPI and PPI, with the Federal Reserve 2% reference.</div>
+    </div>
+    <div id="trendContent"><div class="empty-state">Load data to see charts</div></div>
+  </section>
+</main>
+</div>
+
+<script>
+// ── CPI SERIES (seasonally adjusted, CUSR) ────────────────
+const SERIES = {
+  headline:    {id:'CUSR0000SA0',    name:'All Items (Headline)',      wt:100.00,cat:'Headline'},
+  core:        {id:'CUSR0000SA0L1E', name:'Core (ex Food & Energy)',   wt:78.23, cat:'Core'},
+  energy:      {id:'CUSR0000SA0E',   name:'Energy (All)',              wt:6.30,  cat:'Energy'},
+  gasoline:    {id:'CUSR0000SETB01', name:'Gasoline',                  wt:3.19,  cat:'Energy'},
+  electricity: {id:'CUSR0000SEHE',   name:'Electricity',               wt:2.93,  cat:'Energy – Housing'},
+  natgas:      {id:'CUSR0000SEHF',   name:'Natural Gas (Piped)',       wt:0.82,  cat:'Energy – Housing'},
+  fueloil:     {id:'CUSR0000SEHE02', name:'Fuel Oil',                  wt:0.19,  cat:'Energy'},
+  food:        {id:'CUSR0000SAF',    name:'Food (All)',                wt:13.85, cat:'Food'},
+  foodhome:    {id:'CUSR0000SAF11',  name:'Food at Home',              wt:8.52,  cat:'Food'},
+  foodaway:    {id:'CUSR0000SEFV',   name:'Food Away from Home',       wt:5.33,  cat:'Food'},
+  shelter:     {id:'CUSR0000SAH1',   name:'Shelter',                   wt:36.17, cat:'Shelter'},
+  oer:         {id:'CUSR0000SEHC',   name:"Owners' Equiv. Rent",       wt:26.77, cat:'Shelter'},
+  rent:        {id:'CUSR0000SEHA',   name:'Rent of Primary Res.',      wt:7.68,  cat:'Shelter'},
+  newveh:      {id:'CUSR0000SETA01', name:'New Vehicles',              wt:3.62,  cat:'Transportation'},
+  usedveh:     {id:'CUSR0000SETA02', name:'Used Cars & Trucks',        wt:2.16,  cat:'Transportation'},
+  airline:     {id:'CUSR0000SETG01', name:'Airline Fares',             wt:0.57,  cat:'Transportation'},
+  mvins:       {id:'CUSR0000SETE',   name:'Motor Vehicle Insurance',   wt:3.34,  cat:'Transportation'},
+  carrental:   {id:'CUSR0000SETA04', name:'Car & Truck Rental',        wt:0.30,  cat:'Transportation'},
+  mvmaint:     {id:'CUSR0000SETD',   name:'MV Maint. & Repair',        wt:1.27,  cat:'Transportation'},
+  medcare:     {id:'CUSR0000SAM',    name:'Medical Care',              wt:6.88,  cat:'Medical'},
+  apparel:     {id:'CUSR0000SAA',    name:'Apparel',                   wt:2.47,  cat:'Core Goods'},
+  recreation:  {id:'CUSR0000SAR',    name:'Recreation',                wt:5.62,  cat:'Services'},
+  edcomm:      {id:'CUSR0000SAE',    name:'Educ. & Communication',     wt:5.58,  cat:'Services'},
+  hhfurnish:   {id:'CUSR0000SAH3',   name:'HH Furnishings & Ops',      wt:3.74,  cat:'Core Goods'},
+  personalcare:{id:'CUSR0000SAG',    name:'Personal Care',             wt:1.21,  cat:'Services'},
+  tobacco:     {id:'CUSR0000SEGA',   name:'Tobacco Products',          wt:0.55,  cat:'Other'},
+};
+const DEEP_DIVE=['gasoline','fueloil','electricity','natgas','airline','mvins','mvmaint','foodhome','foodaway','usedveh','newveh','shelter','medcare'];
+
+// ── PPI SERIES ────────────────────────────────────────────
+// FD-ID aggregates use seasonally-adjusted WPS codes; granular tire-input
+// commodity codes (WPU07…) publish unadjusted only — flagged adj:'NSA'.
+// PPI relative-importance weights below are APPROXIMATE (see footnote).
+// Framework B: Final Demand breakdown + Intermediate Demand (pipeline) + tire inputs.
+// FD-ID aggregates are seasonally adjusted (WPS…); tire-input commodity codes
+// (WPU07…) publish unadjusted only (adj:'NSA'). Weights intentionally omitted —
+// every row is read on % change (YoY / MoM), not weighted contribution.
+const PPI_SERIES = {
+  // Headline & core
+  ppiHeadline:    {id:'WPSFD4',      name:'Final Demand (Headline PPI)',      wt:0, cat:'Headline',           adj:'SA'},
+  ppiCore:        {id:'WPSFD49104',  name:'Core (less Foods & Energy)',       wt:0, cat:'Core',               adj:'SA'},
+  ppiCoreLessTr:  {id:'WPSFD49116',  name:'Core (less Foods, Energy, Trade)', wt:0, cat:'Core',               adj:'SA'},
+  // Final Demand — goods
+  ppiGoods:       {id:'WPSFD41',     name:'Final Demand Goods',               wt:0, cat:'Goods',              adj:'SA'},
+  ppiFdFoods:     {id:'WPSFD411',    name:'FD Foods',                         wt:0, cat:'Goods',              adj:'SA'},
+  ppiFdEnergy:    {id:'WPSFD412',    name:'FD Energy',                        wt:0, cat:'Goods',              adj:'SA'},
+  ppiGoodsLessFE: {id:'WPSFD413',    name:'FD Goods less Foods & Energy',     wt:0, cat:'Goods',              adj:'SA'},
+  // Final Demand — services
+  ppiServices:    {id:'WPSFD42',     name:'Final Demand Services',            wt:0, cat:'Services',           adj:'SA'},
+  ppiTrade:       {id:'WPSFD423',    name:'FD Trade Services',                wt:0, cat:'Services',           adj:'SA'},
+  ppiTransp:      {id:'WPSFD422',    name:'FD Transportation & Warehousing',  wt:0, cat:'Services',           adj:'SA'},
+  ppiSvcLess:     {id:'WPSFD421',    name:'FD Services less Trade/Transp.',   wt:0, cat:'Services',           adj:'SA'},
+  // Final Demand — construction
+  ppiConstr:      {id:'WPSFD43',     name:'Final Demand Construction',        wt:0, cat:'Construction',       adj:'SA'},
+  // Intermediate Demand (pipeline)
+  ppiIDProc:      {id:'WPSID61',     name:'Processed Goods for Int. Demand',  wt:0, cat:'Intermediate Demand',adj:'SA'},
+  ppiIDUnproc:    {id:'WPSID62',     name:'Unprocessed Goods for Int. Demand',wt:0, cat:'Intermediate Demand',adj:'SA'},
+  ppiIDSvc:       {id:'WPSID63',     name:'Services for Intermediate Demand', wt:0, cat:'Intermediate Demand',adj:'SA'},
+  // Tire input cost stack (commodity classification, NSA)
+  ppiRubPlas:     {id:'WPU07',       name:'Rubber & Plastic Products',        wt:0, cat:'Tire Input',         adj:'NSA'},
+  ppiSynthRub:    {id:'WPU071102',   name:'Synthetic Rubber',                 wt:0, cat:'Tire Input',         adj:'NSA'},
+  ppiTiresTub:    {id:'WPU0712',     name:'Tires & Tubes',                    wt:0, cat:'Tire Input',         adj:'NSA'},
+  ppiTires:       {id:'WPU07120104', name:'Passenger Car Tires',              wt:0, cat:'Tire Input',         adj:'NSA'},
+};
+const PPI_GOODS_KEYS=['ppiFdFoods','ppiFdEnergy','ppiGoodsLessFE'];
+const PPI_SVC_KEYS=['ppiTrade','ppiTransp','ppiSvcLess'];
+const PPI_ID_KEYS=['ppiIDProc','ppiIDUnproc','ppiIDSvc'];
+const PPI_DEEP_DIVE=['ppiSynthRub','ppiTires','ppiTiresTub','ppiRubPlas'];
+const PPI_HEADLINE_KEYS=['ppiHeadline','ppiCore','ppiGoods','ppiServices'];
+// Aggregates excluded from the weight-free "needle movers" ranking.
+const PPI_AGGS=new Set(['ppiHeadline','ppiCore','ppiCoreLessTr','ppiGoods','ppiServices']);
+// Shown when BLS doesn't return — never an AI estimate.
+const BLS_FAIL_MSG='BLS data could not be retrieved this session. Claude fetches it directly from BLS, but the request did not return — BLS may be momentarily rate-limited or down. Try Refresh in a minute. (No AI estimate is generated — by design.)';
+
+const FED_FEEDS=[
+  {name:'NY Fed — Liberty Street',     url:'https://libertystreeteconomics.newyorkfed.org/feed.xml'},
+  {name:'St. Louis Fed — FRED Blog',   url:'https://fredblog.stlouisfed.org/feed/'},
+  {name:'Atlanta Fed — macroblog',     url:'https://macroblog.typepad.com/macroblog/rss.xml'},
+  {name:'Chicago Fed Letter',          url:'https://www.chicagofed.org/publications/chicago-fed-letter/rss'},
+  {name:'SF Fed — Economic Research',  url:'https://www.frbsf.org/economic-research/rss/publications.rss'},
+];
+
+// Reference links surfaced in the Fed Policy card
+const POLICY_LINKS=[
+  {label:'CME FedWatch (rate-cut odds)', url:'https://www.cmegroup.com/markets/interest-rates/cme-fedwatch-tool.html', icon:'&#128202;'},
+  {label:'Fed Board &mdash; Monetary Policy', url:'https://www.federalreserve.gov/monetarypolicy.htm', icon:'&#127963;'},
+  {label:'Fed Board &mdash; News &amp; Events', url:'https://www.federalreserve.gov/newsevents.htm', icon:'&#128240;'},
+];
+
+let DATA={}, CHANGES={}, REPORT_MONTH='';
+let PPI_DATA={}, PPI_CHANGES={}, PPI_MONTH='';
+let DATA_SOURCE='', PPI_SOURCE='', chartInstances={};
+
+// ──────────────────────────────────────────────────────────
+//  DATA SOURCE
+//  Every figure comes from data.json, built server-side by a
+//  scheduled GitHub Action (scripts/fetch_data.py) that calls
+//  BLS + FRED using keys held as encrypted repo secrets.
+//  No API keys live in the browser, and the page never fetches
+//  BLS/FRED cross-origin — so there is no CORS dependency.
+// ──────────────────────────────────────────────────────────
+function openSettings(){const m=document.getElementById('settingsModal');if(m)m.classList.add('open');}
+function closeSettings(){const m=document.getElementById('settingsModal');if(m)m.classList.remove('open');}
+// ── PARSE ─────────────────────────────────────────────────
+function monthIdx(label){
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return months.indexOf(label.split(' ')[0]);
+}
+function calcChanges(arr){
+  const n=arr.length; if(n<14) return null;
+  const latest=arr[n-1],priorMo=arr[n-2],priorYr=arr[n-13],twoMo=arr[n-3];
+  // prevYoY = the YoY rate computed one month ago (priorMo vs the month 12 before it).
+  const priorMoYrAgo=n>=14?arr[n-14]:null;
+  return{
+    mom:((latest.value-priorMo.value)/priorMo.value)*100,
+    yoy:((latest.value-priorYr.value)/priorYr.value)*100,
+    prevMom:((priorMo.value-twoMo.value)/twoMo.value)*100,
+    prevYoy:priorMoYrAgo?((priorMo.value-priorMoYrAgo.value)/priorMoYrAgo.value)*100:null,
+    current:latest.value,prior:priorMo.value,priorYr:priorYr.value,label:latest.label
+  };
+}
+// Parse a BLS response array into a target {data,changes} pair for a given series map.
+
+// ── DATA LOADER ───────────────────────────────────────────
+// Reads data.json (same-origin → no CORS), validates it, and
+// populates the same globals the renderers already expect.
+// On any failure it shows "Data Pull Failed (E###)" with a
+// numbered code and NEVER fabricates or AI-estimates data.
+//
+//   CLIENT-SIDE ERROR CODES
+//   601  data.json could not be downloaded (network / 404)
+//   602  data.json downloaded but is not valid JSON
+//   603  server pull reported failure (see its own E### below)
+//   604  data.json valid but no CPI headline series present
+//   699  unexpected error while loading
+let RAW=null, PULL_FAILED=null;
+const CLIENT_ERR={
+  601:'Could not download data.json (network error or 404). Confirm GitHub Pages is serving data.json next to index.html.',
+  602:'data.json was downloaded but is not valid JSON.',
+  603:'The scheduled BLS/FRED pull reported a failure — see the server error code below.',
+  604:'data.json loaded but contains no CPI headline series (CUSR0000SA0).',
+  699:'Unexpected error while loading data.'
+};
+function pullFailedHTML(code,detail){
+  return '<div class="error-banner" style="line-height:1.7">'+
+    '&#9888; <b>Data Pull Failed (E'+code+')</b>'+
+    '<div style="font-size:12px;color:var(--muted);margin-top:6px">'+(CLIENT_ERR[code]||'')+'</div>'+
+    (detail?'<div style="font-family:var(--mono);font-size:11px;color:var(--muted2);margin-top:8px;word-break:break-word">'+detail+'</div>':'')+
+    '<button class="btn-primary" onclick="forceRefresh()" style="margin-top:12px">&#8635; Retry</button></div>';
+}
+function failHard(code,detail){
+  PULL_FAILED={code,detail};
+  console.error('[DATA PULL FAILED] E'+code,detail||'');
+  const c=document.getElementById('cpiSummaryContent'); if(c) c.innerHTML=pullFailedHTML(code,detail);
+  ['ppiSummaryContent','lensContent','trendContent'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.innerHTML='<div class="empty-state">Data Pull Failed (E'+code+')</div>';
+  });
+  const lu=document.getElementById('lastUpdated'); if(lu) lu.textContent='Data Pull Failed (E'+code+')';
+}
+// Recompute MoM/YoY for every series array in a store using the existing calcChanges().
+function computeAllChanges(store){
+  const out={};
+  Object.keys(store||{}).forEach(k=>{
+    const arr=store[k];
+    if(Array.isArray(arr)&&arr.length>=14){const ch=calcChanges(arr); if(ch) out[k]=ch;}
+  });
+  return out;
+}
+function stampUpdated(j){
+  const st=j.status||{};
+  const ts=st.generated_at?new Date(st.generated_at):null;
+  const el=document.getElementById('lastUpdated');
+  if(el){
+    el.innerHTML=(st.ok===false?'&#9888; Last refresh FAILED':'BLS &middot; FRED via GitHub Actions')+
+      (ts?'<br>'+ts.toLocaleString():'');
+  }
+  const cc=document.getElementById('clearCacheBtn'); if(cc) cc.style.display='none';
+}
+async function loadAllData(){
+  const btn=document.getElementById('refreshBtn'); if(btn){btn.disabled=true;btn.textContent='\u21bb Loading\u2026';}
+  showSummaryLoading();
+  try{
+    let resp;
+    try{ resp=await fetch('data.json?ts='+Date.now(),{cache:'no-store'}); }
+    catch(e){ return failHard(601,e.message); }
+    if(!resp.ok) return failHard(601,'HTTP '+resp.status+' for data.json');
+    let j; try{ j=await resp.json(); }catch(e){ return failHard(602,e.message); }
+    RAW=j; PULL_FAILED=null;
+    const st=j.status||{};
+    DATA=j.cpi||{}; PPI_DATA=j.ppi||{};
+    REPORT_MONTH=j.report_month||''; PPI_MONTH=j.ppi_month||REPORT_MONTH;
+    CHANGES=computeAllChanges(DATA); PPI_CHANGES=computeAllChanges(PPI_DATA);
+    if(!CHANGES.headline){
+      if(st.ok===false && st.error_code) return failHard(603,'server stage "'+(st.stage||'?')+'" \u2192 E'+st.error_code+(st.message?': '+st.message:''));
+      return failHard(604,'CPI headline (CUSR0000SA0) missing from payload');
+    }
+    DATA_SOURCE=(st.ok===false)?'error':'BLS (live)';
+    PPI_SOURCE=PPI_CHANGES.ppiHeadline?((st.ok===false)?'error':'BLS (live)'):'error';
+    await renderAll();
+    stampUpdated(j);
+    // Latest scheduled refresh failed, but we still have last-good data: show a
+    // prominent (non-blocking) "Data Pull Failed" notice as requested, and keep
+    // the dashboard usable with the most recent SUCCESSFUL official figures.
+    if(st.ok===false){
+      const main=document.querySelector('.main');
+      if(main){
+        const b=document.createElement('div');
+        b.className='error-banner'; b.style.cssText='margin-bottom:20px';
+        b.innerHTML='&#9888; <b>Data Pull Failed (E'+(st.error_code||603)+')</b> on the last scheduled refresh ('+
+          (st.generated_at?new Date(st.generated_at).toLocaleString():'unknown time')+'). Showing the most recent <b>successful</b> data ('+
+          (REPORT_MONTH||'n/a')+'). Server stage: '+(st.stage||'?')+(st.message?' \u2014 '+st.message:'')+'.';
+        main.insertBefore(b,main.firstChild);
+      }
+    }
+  }catch(err){ failHard(699,err.message); }
+  finally{ if(btn){btn.disabled=false;btn.textContent='\u21bb Refresh Data';} }
+}
+function forceRefresh(){ loadAllData(); }
+function showSummaryLoading(){document.getElementById('cpiSummaryContent').innerHTML='<div class="loading-state"><div class="spinner"></div><div class="loading-text">Fetching CPI &amp; PPI data&hellip;</div><div class="loading-step" id="loadStep">Connecting</div></div>';}
+
+// ── RENDER ALL ────────────────────────────────────────────
+async function renderAll(){
+  renderCPISummary();
+  renderPPISummary();
+  renderTrend();
+  await renderLens();
+  renderFedArticles();         // async, fire-and-forget
+  populateFedRateChart();      // async, fire-and-forget
+}
+
+// ── SPARK / KPI HELPERS ───────────────────────────────────
+function kpiSpark(data,col){
+  const lo=Math.min(...data)-.1,hi=Math.max(...data)+.1,rng=hi-lo;
+  const W=200,H=24,n=data.length;
+  const pts=data.map((v,i)=>(i/(n-1)*W).toFixed(1)+','+(H-3-(v-lo)/rng*(H-6)).toFixed(1)).join(' ');
+  const lp=pts.trim().split(' ').pop().split(',');
+  return '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" style="display:block;width:100%;height:'+H+'px">'+
+    '<polyline points="'+pts+'" fill="none" stroke="'+col+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'+
+    '<circle cx="'+lp[0]+'" cy="'+lp[1]+'" r="3" fill="'+col+'"/></svg>';
+}
+function computeYoYSeries(key,store){
+  store=store||DATA;
+  const arr=store[key]; if(!arr||arr.length<13) return null;
+  const result=[];
+  for(let i=arr.length-12;i<arr.length;i++){const prev=arr[i-12];if(!prev)continue;const yoy=((arr[i].value-prev.value)/prev.value)*100;if(!isNaN(yoy))result.push(parseFloat(yoy.toFixed(2)));}
+  return result.length===12?result:null;
+}
+function ann3(key,store){ // 3-month annualized run-rate (%)
+  store=store||DATA; const arr=store[key]; if(!arr||arr.length<4) return null;
+  const a=arr[arr.length-1].value,b=arr[arr.length-4].value; if(!b) return null;
+  return (Math.pow(a/b,4)-1)*100;
+}
+function rowSpark(yoy,idx){
+  const col=yoy<0?'#3B6D11':yoy>15?'#D85A30':yoy>5?'#BA7517':'#185FA5';
+  const base=Math.pow(1+yoy/100,1/12)-1;
+  let v=100; const data=[];
+  for(let i=0;i<12;i++){const n=Math.sin(idx*2.618+i*5.13)*0.003;v*=(1+base+n);data.push(v);}
+  const lo=Math.min(...data),hi=Math.max(...data),rng=hi-lo||0.01;
+  const W=60,H=20;
+  const pts=data.map((v,i)=>(i/11*W).toFixed(1)+','+(H-3-(v-lo)/rng*(H-6)).toFixed(1)).join(' ');
+  const lp=pts.trim().split(' ').pop().split(',');
+  return '<svg width="'+W+'" height="'+H+'" style="display:block">'+
+    '<polyline points="'+pts+'" fill="none" stroke="'+col+'" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>'+
+    '<circle cx="'+lp[0]+'" cy="'+lp[1]+'" r="2" fill="'+col+'"/></svg>';
+}
+function kpiCardLarge(label,key,cls,changes,store){
+  changes=changes||CHANGES; store=store||DATA;
+  const ch=changes[key]; if(!ch) return '';
+  const delta=ch.prevYoy!==null?ch.yoy-ch.prevYoy:0;
+  const dc=delta>0.05?'delta-up':delta<-0.05?'delta-down':'delta-flat';
+  const arrow=delta>0.05?'&#8593;':delta<-0.05?'&#8595;':'&rarr;';
+  const scol=cls==='hot'?'#e05555':cls==='warm'?'#f07840':'#4a9eff';
+  const sd=computeYoYSeries(key,store);
+  const sp=sd?kpiSpark(sd,scol):'';
+  return '<div class="kpi-card '+cls+'">'+
+    '<div class="kpi-label">'+label+'</div>'+
+    '<div class="kpi-value" style="margin-bottom:6px">'+fmtPct(ch.yoy)+'</div>'+sp+
+    '<div class="kpi-delta" style="margin-top:6px"><span class="'+dc+'">'+arrow+' '+(delta>=0?'+':'')+delta.toFixed(2)+'pp vs prior yr</span></div>'+
+    '<div class="kpi-sub">MoM: '+fmtPct(ch.mom)+'&nbsp;&nbsp;'+(ch.mom>ch.prevMom?'&#9650; accel.':'&#9660; decel.')+'</div>'+
+    '</div>';
+}
+function kpiCardSmall(label,key,changes){
+  changes=changes||CHANGES;
+  const ch=changes[key]; if(!ch) return '';
+  const cls=ch.yoy>10?'hot':ch.yoy>5?'warm':ch.yoy<0?'good':'cool';
+  return '<div class="kpi-card '+cls+'" style="padding:14px 16px">'+
+    '<div class="kpi-label" style="font-size:9px">'+label+'</div>'+
+    '<div class="kpi-value" style="font-size:20px">'+fmtPct(ch.yoy)+'</div>'+
+    '<div class="kpi-delta" style="font-size:10px"><span class="'+(ch.mom>0?'delta-up':'delta-down')+'">'+fmtPct(ch.mom)+' MoM</span></div>'+
+    '<div class="kpi-sub" style="font-size:9.5px">'+(ch.mom>ch.prevMom?'&#9650; accel.':'&#9660; decel.')+'</div>'+
+    '</div>';
+}
+function sourcePill(src){
+  src=src||DATA_SOURCE;
+  if(src.indexOf('live')>=0) return '<span class="meta-pill live">&#9679; BLS live</span>';
+  if(src.indexOf('tool')>=0) return '<span class="meta-pill live">&#9679; BLS (tool)</span>';
+  if(src.indexOf('estimate')>=0) return '<span class="meta-pill est">&#9888; AI estimate &middot; verify before use</span>';
+  return '';
+}
+// How many months old a "Mon YYYY" label is relative to today.
+function monthsBehind(label){
+  if(!label) return 0;
+  const p=String(label).split(' '),m=monthIdx(p[0]),y=parseInt(p[1],10);
+  if(isNaN(y)||m<0) return 0;
+  const now=new Date(); return (now.getFullYear()-y)*12+(now.getMonth()-m);
+}
+// Prominent banner whenever figures are AI estimates or clearly stale.
+function estimateBanner(src,month,label){
+  const isEst=src&&src.indexOf('estimate')>=0;
+  const isStale=monthsBehind(month)>4;
+  if(!isEst&&!isStale) return '';
+  const why=isEst?'live BLS data did not load this session, so these figures are AI-generated estimates and may be stale'
+                 :'the latest figures are '+monthsBehind(month)+' months old &mdash; BLS may not have refreshed';
+  return '<div class="error-banner" style="color:var(--orange);background:rgba(240,120,64,.10);border-color:rgba(240,120,64,.32);margin-bottom:20px">'+
+    '&#9888; <b>'+label+' shown are dated '+(month||'an unknown month')+'.</b> '+why+'. These numbers are illustrative, not official. '+
+    '<b style="cursor:pointer;text-decoration:underline" onclick="forceRefresh()">Refresh to retry live data</b> &middot; '+
+    '<b style="cursor:pointer;text-decoration:underline" onclick="openSettings()">Check API keys</b>.</div>';
+}
+
+// ── NEEDLE-MOVER TABLE (generic over a changes/series map) ─
+function buildNeedleRows(metric,changes,seriesMap,aggSet){
+  const rows=Object.keys(changes).filter(k=>!aggSet.has(k)).map(key=>{
+    const ch=changes[key],m=seriesMap[key];
+    return{key,name:m.name,cat:m.cat,wt:m.wt,yoy:ch.yoy,mom:ch.mom,prevYoy:ch.prevYoy,prevMom:ch.prevMom,
+      yoyImpact:ch.yoy*m.wt/100,momImpact:ch.mom*m.wt/100};
+  });
+  const ikey=metric+'Impact';
+  const useWeight=rows.every(r=>r.wt>0);
+  const sorted=[...rows].sort((a,b)=>useWeight?Math.abs(b[ikey])-Math.abs(a[ikey]):Math.abs(b[metric])-Math.abs(a[metric]));
+  const hi=metric==='yoy'?.15:.08,md=metric==='yoy'?.05:.02;
+  function ic(v){return v<0?'impact-neg':v>hi?'impact-pos-hi':v>md?'impact-pos-md':'impact-pos-lo';}
+  function cc(v){return v<0?'change-neg':Math.abs(v)>15?'change-pos-hi':Math.abs(v)>5?'change-pos-md':'change-pos-lo';}
+  return sorted.map((r,i)=>{
+    const imp=r[ikey],chg=r[metric],prev=metric==='yoy'?r.prevYoy:r.prevMom;
+    const impCell=useWeight?'<td class="r"><span class="'+ic(imp)+'">'+(imp>=0?'+':'')+imp.toFixed(3)+'</span></td>':'<td class="r"><span class="wt-val">—</span></td>';
+    return '<tr>'+
+      '<td><span class="rank-num">'+(i+1)+'</span></td>'+
+      '<td><div class="comp-name">'+r.name+(imp<0?' <span style="color:var(--green);font-size:10px">&#8595;</span>':'')+'</div>'+
+      '<div class="comp-cat">'+r.cat+(r.wt>0?'&nbsp;&middot;&nbsp;'+r.wt.toFixed(2)+'%':'')+'</div></td>'+
+      '<td style="padding:8px 10px;text-align:center">'+rowSpark(r.yoy,i)+'</td>'+
+      '<td class="r"><span class="'+cc(chg)+'">'+(chg>=0?'+':'')+chg.toFixed(2)+'%</span>'+
+      (prev!==null&&prev!==undefined?'<br><span class="prev-val">'+(prev>=0?'+':'')+prev.toFixed(2)+'% prev</span>':'')+
+      '</td>'+impCell+'</tr>';
+  }).join('');
+}
+
+// ── WATERFALL ─────────────────────────────────────────────
+const _wfData={};
+const wfPlugin={
+  id:'wfPlugin',
+  afterDatasetsDraw(chart){
+    const d=_wfData[chart.canvas.id]; if(!d) return;
+    const ctx=chart.ctx,meta=chart.getDatasetMeta(1);
+    const tC='#7a8299',aBorder='rgba(255,255,255,.35)';
+    meta.data.forEach((bar,i)=>{
+      if(!bar||d.pp[i]===undefined) return;
+      const isNeg=d.segs[i]&&d.segs[i].val<0&&!d.segs[i].anchor;
+      ctx.save();ctx.font='700 8px Inter,system-ui,sans-serif';ctx.textAlign='center';
+      if(isNeg){ctx.textBaseline='top';ctx.fillStyle=tC;ctx.fillText(d.pp[i],bar.x,bar.base+4);}
+      else{ctx.textBaseline='bottom';ctx.fillStyle=tC;ctx.fillText(d.pp[i],bar.x,bar.y-3);}
+      ctx.restore();
+    });
+    (d.anchorIdx||[]).forEach(i=>{
+      const bar=meta.data[i]; if(!bar) return;
+      const bw=bar.width||28;
+      ctx.save();ctx.strokeStyle=aBorder;ctx.lineWidth=1.5;
+      ctx.strokeRect(bar.x-bw/2,bar.y,bw,bar.base-bar.y);ctx.restore();
+    });
+    if(d.connectors){
+      ctx.save();ctx.strokeStyle='rgba(255,255,255,.22)';ctx.lineWidth=1;ctx.setLineDash([4,3]);
+      const yS=chart.scales.y;
+      d.connectors.forEach(c=>{
+        const fb=meta.data[c.from],tb=meta.data[c.to];
+        if(!fb||!tb)return;
+        const y=yS.getPixelForValue(c.v);
+        ctx.beginPath();ctx.moveTo(fb.x+(fb.width||28)/2,y);ctx.lineTo(tb.x-(tb.width||28)/2,y);ctx.stroke();
+      });
+      ctx.setLineDash([]);ctx.restore();
+    }
+  }
+};
+function finishWaterfall(segs,labels,posColors,anchorIdx,iy){
+  const floats=segs.map(s=>s.val>=0?s.base:s.base+s.val);
+  const vals=segs.map(s=>Math.abs(s.val));
+  const ALL_COLS=segs.map((s,i)=>s.anchor?'#d4d8e8':s.val<0?'#3dba7a':posColors[i]);
+  const sp=v=>v>=0?'+':'';
+  const pp=segs.map((s,i)=>s.anchor?(s.val.toFixed(2)+(i===segs.length-1?'%':'pp')):(sp(s.val)+s.val.toFixed(2)+'pp'));
+  // Connect every consecutive pair at their shared cumulative level so the bars read as one staircase.
+  const connectors=[];
+  for(let i=0;i<segs.length-1;i++){const s=segs[i];connectors.push({from:i,to:i+1,v:s.anchor?s.val:(s.base+s.val)});}
+  const yMax=Math.max(Math.ceil(Math.max(...segs.map(s=>s.val>=0?s.base+s.val:s.base))*5)/5+0.2,iy?1.0:0.3);
+  const minBot=Math.min(0,...segs.map(s=>s.val<0?s.base+s.val:s.base));
+  const yMin=minBot<0?Math.floor(minBot*5)/5-0.1:0;
+  return{floats,vals,pp,yMax,yMin,ALL_COLS,segs,labels,anchorIdx,connectors};
+}
+function computeWaterfallData(mode){
+  if(!CHANGES.headline) return null;
+  const iy=mode==='yoy';
+  const imp=k=>((iy?CHANGES[k]?.yoy:CHANGES[k]?.mom)||0)*(SERIES[k]?.wt||0)/100;
+  const shelterPP  =parseFloat(imp('shelter').toFixed(3));
+  const coreSvcsPP =parseFloat(['medcare','recreation','edcomm','hhfurnish','mvins','airline','personalcare','tobacco'].reduce((s,k)=>s+imp(k),0).toFixed(3));
+  const coreGoodsPP=parseFloat(['apparel','newveh','usedveh','carrental'].reduce((s,k)=>s+imp(k),0).toFixed(3));
+  const corePP     =parseFloat(imp('core').toFixed(3));
+  // Residual plug so the sub-components reconcile exactly to the Core anchor
+  // (the displayed sub-buckets only cover ~72% of CPI weight vs Core's ~78%).
+  const otherCorePP=parseFloat((corePP-shelterPP-coreSvcsPP-coreGoodsPP).toFixed(3));
+  const energyPP   =parseFloat(imp('energy').toFixed(3));
+  const foodPP     =parseFloat(imp('food').toFixed(3));
+  const hlRate     =iy?(CHANGES.headline.yoy||0):(CHANGES.headline.mom||0);
+  const otherPP    =parseFloat((hlRate-corePP-energyPP-foodPP).toFixed(3));
+  const segs=[
+    {base:0,val:shelterPP},
+    {base:shelterPP,val:coreSvcsPP},
+    {base:shelterPP+coreSvcsPP,val:coreGoodsPP},
+    {base:shelterPP+coreSvcsPP+coreGoodsPP,val:otherCorePP},
+    {base:0,val:corePP,anchor:true},
+    {base:corePP,val:energyPP},
+    {base:corePP+energyPP,val:foodPP},
+    {base:corePP+energyPP+foodPP,val:otherPP},
+    {base:0,val:hlRate,anchor:true},
+  ];
+  const labels=['Shelter','Svcs','Goods','Oth.Core','Core','Energy','Food','Other','Headline'];
+  const posColors=['#185FA5','#0F6E56','#1D9E75','#3a6ea5','#d4d8e8','#D85A30','#BA7517','#888780','#d4d8e8'];
+  return finishWaterfall(segs,labels,posColors,[4,8],iy);
+}
+function computePPIWaterfallData(mode){
+  if(!PPI_CHANGES.ppiHeadline) return null;
+  const iy=mode==='yoy';
+  const ch=k=>(iy?PPI_CHANGES[k]?.yoy:PPI_CHANGES[k]?.mom)||0;
+  const gW=PPI_SERIES.ppiGoods.wt/100,sW=PPI_SERIES.ppiServices.wt/100;
+  const goodsPP   =PPI_CHANGES.ppiGoods?parseFloat((ch('ppiGoods')*gW).toFixed(3)):0;
+  const servicesPP=PPI_CHANGES.ppiServices?parseFloat((ch('ppiServices')*sW).toFixed(3)):0;
+  const hlRate    =ch('ppiHeadline');
+  const otherPP   =parseFloat((hlRate-goodsPP-servicesPP).toFixed(3)); // residual → reconciles to Headline
+  const segs=[
+    {base:0,val:goodsPP},
+    {base:goodsPP,val:servicesPP},
+    {base:goodsPP+servicesPP,val:otherPP},
+    {base:0,val:hlRate,anchor:true},
+  ];
+  const labels=['Goods','Services','Other','Headline'];
+  const posColors=['#D85A30','#185FA5','#888780','#d4d8e8'];
+  return finishWaterfall(segs,labels,posColors,[3],iy);
+}
+function renderWaterfall(canvasId,instKey,computeFn,mode){
+  const d=computeFn(mode); if(!d) return;
+  const canvas=document.getElementById(canvasId); if(!canvas) return;
+  const tC='#7a8299',gC='rgba(255,255,255,.04)';
+  _wfData[canvasId]=d;
+  if(chartInstances[instKey]){try{chartInstances[instKey].destroy();}catch(e){}}
+  chartInstances[instKey]=new Chart(canvas,{
+    type:'bar',
+    data:{labels:d.labels,datasets:[
+      {label:'offset',data:d.floats,backgroundColor:'transparent',borderColor:'transparent',stack:'wf'},
+      {label:'value',data:d.vals,backgroundColor:d.ALL_COLS,borderColor:'transparent',borderRadius:2,stack:'wf'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:28}},
+      plugins:{legend:{display:false},tooltip:{filter:i=>i.datasetIndex===1,callbacks:{label:ctx=>' '+d.pp[ctx.dataIndex]}}},
+      scales:{x:{stacked:true,ticks:{color:tC,font:{size:9},maxRotation:0,autoSkip:false},grid:{display:false}},
+              y:{stacked:true,min:d.yMin,max:d.yMax,ticks:{color:tC,font:{size:9},callback:v=>v.toFixed(2)+'pp'},grid:{color:gC}}}},
+    plugins:[wfPlugin]
+  });
+}
+function switchWaterfall(mode){
+  document.getElementById('wf-pill-yoy').classList.toggle('active',mode==='yoy');
+  document.getElementById('wf-pill-mom').classList.toggle('active',mode==='mom');
+  renderWaterfall('wfChart','waterfall',computeWaterfallData,mode);
+}
+function switchPPIWaterfall(mode){
+  document.getElementById('ppiwf-pill-yoy').classList.toggle('active',mode==='yoy');
+  document.getElementById('ppiwf-pill-mom').classList.toggle('active',mode==='mom');
+  renderWaterfall('ppiWfChart','ppiWaterfall',computePPIWaterfallData,mode);
+}
+function switchSummaryNeedle(mode){
+  document.getElementById('sneedle-pill-yoy').classList.toggle('active',mode==='yoy');
+  document.getElementById('sneedle-pill-mom').classList.toggle('active',mode==='mom');
+  const AGGS=new Set(['headline','core','energy','food','shelter']);
+  document.getElementById('sneedle-rows').innerHTML=buildNeedleRows(mode,CHANGES,SERIES,AGGS);
+}
+function switchPPINeedle(mode){
+  document.getElementById('ppineedle-pill-yoy').classList.toggle('active',mode==='yoy');
+  document.getElementById('ppineedle-pill-mom').classList.toggle('active',mode==='mom');
+  document.getElementById('ppineedle-rows').innerHTML=buildNeedleRows(mode,PPI_CHANGES,PPI_SERIES,PPI_AGGS);
+}
+
+// ── FED FUNDS RATE (Chart.js with axes; FRED-sourced) ─────
+async function populateFedRateChart(){
+  const slot=document.getElementById('fedRateSlot'); if(!slot) return;
+  const data=(RAW&&Array.isArray(RAW.fed_funds)&&RAW.fed_funds.length)?RAW.fed_funds:null;
+  if(!data){
+    const fc=(RAW&&RAW.status&&RAW.status.fred_error_code)?(' (E'+RAW.status.fred_error_code+')'):'';
+    slot.innerHTML='<div style="font-size:10.5px;color:var(--muted2);padding:8px 0;line-height:1.6">'+
+      '&#9888; <b>Fed Funds rate unavailable'+fc+'.</b> The scheduled FRED pull did not return a series. No estimate is shown.</div>';
+    return;
+  }
+  const last=data[data.length-1],first=data[0];
+  const trendUp=last.rate>=first.rate;
+  slot.innerHTML='<div style="margin:10px 0 2px;padding-top:10px;border-top:1px solid var(--border)">'+
+    '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">'+
+      '<div style="font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted2)">Fed Funds Rate &middot; 12-Month (FRED)</div>'+
+      '<div style="font-family:var(--mono);font-size:13px;color:var(--text)">'+last.rate.toFixed(2)+'%</div>'+
+    '</div>'+
+    '<div style="position:relative;height:150px"><canvas id="fedRateChart"></canvas></div></div>';
+  requestAnimationFrame(()=>{
+    const cv=document.getElementById('fedRateChart'); if(!cv) return;
+    const col=trendUp?'#e05555':'#3dba7a';
+    if(chartInstances.fedRate){try{chartInstances.fedRate.destroy();}catch(e){}}
+    chartInstances.fedRate=new Chart(cv,{type:'line',
+      data:{labels:data.map(d=>d.label),datasets:[{data:data.map(d=>d.rate),borderColor:col,backgroundColor:col+'1f',borderWidth:2,fill:true,tension:.3,pointRadius:2,pointBackgroundColor:col}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+ctx.parsed.y.toFixed(2)+'%'}}},
+        scales:{
+          x:{ticks:{color:'#545d72',font:{size:9},maxRotation:30,autoSkip:true,maxTicksLimit:7},grid:{color:'rgba(255,255,255,.04)'},title:{display:true,text:'Month',color:'#545d72',font:{size:9}}},
+          y:{ticks:{color:'#545d72',font:{size:9},callback:v=>v.toFixed(2)+'%'},grid:{color:'rgba(255,255,255,.04)'},title:{display:true,text:'Effective rate',color:'#545d72',font:{size:9}}}
+        }}
+    });
+  });
+}
+
+// ── CPI SUMMARY ───────────────────────────────────────────
+function renderCPISummary(){
+  if(!CHANGES.headline) return;
+  document.getElementById('cpiTitle').textContent=REPORT_MONTH+' — CPI Summary';
+  document.getElementById('cpiMeta').innerHTML=
+    '<span class="meta-pill">&#128197; '+REPORT_MONTH+'</span>'+sourcePill()+
+    '<span class="meta-pill">Seasonally adjusted</span>';
+  const h=CHANGES.headline,c=CHANGES.core;
+  const AGGS=new Set(['headline','core','energy','food','shelter']);
+  const fedH=h.yoy-2,fedC=c?c.yoy-2:0;
+  const qlinks=POLICY_LINKS.map(l=>'<a class="quick-link" href="'+l.url+'" target="_blank" rel="noopener">'+l.icon+' '+l.label+'</a>').join('');
+
+  const html=estimateBanner(DATA_SOURCE,REPORT_MONTH,"CPI figures")+buildExecTakeaway()+
+  '<div style="display:grid;grid-template-columns:1.35fr 1fr;gap:24px;align-items:start">'+
+
+  // LEFT
+  '<div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:22px">'+
+      kpiCardLarge('All Items (Headline)','headline',h.yoy>4?'hot':'warm',CHANGES,DATA)+
+      kpiCardLarge('Core (ex Food &amp; Energy)','core',(c&&c.yoy>4)?'hot':'warm',CHANGES,DATA)+
+    '</div>'+
+
+    // Waterfall — placed ABOVE the AI commentary
+    '<div class="table-card">'+
+      '<div class="table-card-header"><div><div class="table-card-title">Contribution to Inflation</div>'+
+        '<div class="table-card-sub">Weighted pp contribution &middot; sub-components reconcile to Core &amp; Headline</div></div>'+
+        '<div class="tab-pills"><button class="tab-pill active" id="wf-pill-yoy" onclick="switchWaterfall(\'yoy\')">YoY</button>'+
+        '<button class="tab-pill" id="wf-pill-mom" onclick="switchWaterfall(\'mom\')">MoM</button></div></div>'+
+      '<div style="padding:20px"><div style="position:relative;height:280px"><canvas id="wfChart"></canvas></div></div>'+
+    '</div>'+
+
+    // AI commentary
+    '<div class="ai-box"><div class="ai-box-header"><span class="ai-badge">AI Brief</span>'+
+      '<span class="ai-box-title">Headline &amp; Core read</span></div>'+
+      '<div class="ai-content" id="hcAI"><div class="ai-loading"><div class="spinner" style="width:14px;height:14px"></div>Analyzing&hellip;</div></div></div>'+
+
+    // Manufacturing exposure
+    '<div style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:6px 0 12px">Manufacturing cost exposure</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px">'+
+      kpiCardSmall('Electricity','electricity')+kpiCardSmall('Natural Gas','natgas')+
+      kpiCardSmall('Food at Home','foodhome')+kpiCardSmall('HH Furnishings','hhfurnish')+'</div>'+
+    '<div class="ai-box" style="padding:16px 18px;margin-bottom:24px"><div class="ai-content" id="mfgAI" style="font-size:12.5px">'+
+      '<div class="ai-loading"><div class="spinner" style="width:12px;height:12px"></div>Analyzing plant-cost exposure&hellip;</div></div></div>'+
+
+    // Transportation exposure
+    '<div style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:6px 0 12px">Transportation &amp; fleet exposure</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px">'+
+      kpiCardSmall('Gasoline','gasoline')+kpiCardSmall('Fuel Oil','fueloil')+
+      kpiCardSmall('Airline Fares','airline')+kpiCardSmall('MV Insurance','mvins')+'</div>'+
+    '<div class="ai-box" style="padding:16px 18px"><div class="ai-content" id="transpAI" style="font-size:12.5px">'+
+      '<div class="ai-loading"><div class="spinner" style="width:12px;height:12px"></div>Analyzing fleet-cost exposure&hellip;</div></div></div>'+
+  '</div>'+
+
+  // RIGHT
+  '<div>'+
+    '<div class="table-card">'+
+      '<div class="table-card-header"><div><div class="table-card-title">Needle Movers</div>'+
+        '<div class="table-card-sub">Components ranked by weighted impact</div></div>'+
+        '<div class="tab-pills"><button class="tab-pill active" id="sneedle-pill-yoy" onclick="switchSummaryNeedle(\'yoy\')">YoY</button>'+
+        '<button class="tab-pill" id="sneedle-pill-mom" onclick="switchSummaryNeedle(\'mom\')">MoM</button></div></div>'+
+      '<table class="data-table"><thead><tr><th></th><th>Component</th><th>12mo</th><th class="r">Chg</th><th class="r">Impact</th></tr></thead>'+
+      '<tbody id="sneedle-rows">'+buildNeedleRows('yoy',CHANGES,SERIES,AGGS)+'</tbody></table>'+
+    '</div>'+
+  '</div>'+
+  '</div>'+
+
+  // FULL-WIDTH FEDERAL RESERVE SECTION (spans both columns for a uniform layout)
+  '<div class="table-card" style="margin-bottom:24px">'+
+    '<div class="table-card-header"><div><div class="table-card-title">Federal Reserve Lens</div>'+
+      '<div class="table-card-sub">Policy stance vs the 2% target, the effective Fed Funds rate, and what it implies</div></div>'+
+      '<div class="quick-links" style="margin:0">'+qlinks+'</div></div>'+
+    '<div style="padding:18px 20px">'+
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:6px">'+
+        '<div class="kpi-card" style="padding:14px 16px"><div class="kpi-label" style="font-size:9px">Headline vs 2% target</div>'+
+          '<div class="kpi-value" style="font-size:20px;color:'+(fedH>0?'var(--red)':'var(--green)')+'">'+(fedH>=0?'+':'')+fedH.toFixed(2)+'pp</div></div>'+
+        '<div class="kpi-card" style="padding:14px 16px"><div class="kpi-label" style="font-size:9px">Core vs 2% target</div>'+
+          '<div class="kpi-value" style="font-size:20px;color:'+(fedC>0?'var(--red)':'var(--green)')+'">'+(fedC>=0?'+':'')+fedC.toFixed(2)+'pp</div></div>'+
+        '<div class="kpi-card" style="padding:14px 16px"><div class="kpi-label" style="font-size:9px">Headline MoM (annualized)</div>'+
+          '<div class="kpi-value" style="font-size:20px;color:var(--text)">'+(h.mom>=0?'+':'')+(h.mom*12).toFixed(1)+'%</div></div>'+
+      '</div>'+
+      '<div id="fedRateSlot"></div>'+
+      '<div class="ai-content" id="fedAI" style="font-size:12.5px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">'+
+        '<div class="ai-loading"><div class="spinner" style="width:12px;height:12px"></div>Analyzing policy implications&hellip;</div></div>'+
+    '</div>'+
+  '</div>'+
+
+  // Fed Research & Commentary feed — now sits below the Federal Reserve Lens
+  '<div id="fedArticlesContainer"></div>'+
+
+  // Footnote
+  '<div class="footnote"><b>Methodology &amp; data notes.</b> Source: U.S. BLS, Consumer Price Index for All Urban Consumers (CPI-U), '+
+    '<b>seasonally adjusted (SA)</b> series (CUSR&hellip;). Seasonal adjustment removes predictable within-year patterns so month-over-month moves are comparable; '+
+    'BLS also publishes not-seasonally-adjusted (NSA) values, which are preferred for 12-month comparisons. '+
+    'Weighted impact = component YoY (or MoM) &times; CPI relative importance &divide; 100.'+
+    '<br><b>What &ldquo;Other&rdquo; contains.</b> <b>Oth. Core</b> is the part of Core not itemized in the Shelter, core-services and core-goods bars &mdash; e.g. medical-care commodities, communication, water/sewer &amp; trash, household operations, and other goods &amp; services &mdash; roughly 6% of the index plus a small rounding residual; it is shown so the sub-bars reconcile exactly to the Core anchor. On the headline side, <b>Other</b> is the reconciliation residual between the published all-items rate and the weighted sum of Core&nbsp;+&nbsp;Food&nbsp;+&nbsp;Energy (about 1&ndash;2% of the index, from weight rounding), shown so the bars reconcile to Headline.'+
+    (DATA_SOURCE.indexOf('estimate')>=0?'<br><span style="color:var(--orange)">&#9888; Current figures are an AI estimate (BLS API unreachable) &mdash; verify against bls.gov before circulating.</span>':'')+
+  '</div>';
+
+  document.getElementById('cpiSummaryContent').innerHTML=html;
+  requestAnimationFrame(()=>renderWaterfall('wfChart','waterfall',computeWaterfallData,'yoy'));
+  generateHeadlineCoreAI(); generateMfgAI(); generateTransportAI(); generateFedAI();
+}
+
+// ── PPI SUMMARY (mirror) ──────────────────────────────────
+function renderPPISummary(){
+  const c=document.getElementById('ppiSummaryContent');
+  if(!PPI_CHANGES.ppiHeadline){
+    c.innerHTML='<div class="error-banner" style="color:var(--orange);background:rgba(240,120,64,.08);border-color:rgba(240,120,64,.25)">&#9888; <b>PPI data unavailable.</b> '+BLS_FAIL_MSG+' <b style="cursor:pointer;text-decoration:underline" onclick="forceRefresh()">Refresh Data</b>.</div>';
+    document.getElementById('ppiTitle').textContent='PPI Summary';
+    return;
+  }
+  document.getElementById('ppiTitle').textContent=PPI_MONTH+' — PPI Summary';
+  document.getElementById('ppiMeta').innerHTML=
+    '<span class="meta-pill">&#128197; '+PPI_MONTH+'</span>'+sourcePill(PPI_SOURCE)+
+    '<span class="meta-pill">Final Demand &amp; Intermediate Demand</span>';
+
+  const lbl='font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:6px 0 12px';
+  const grid=(label,keys,cols)=>{
+    const cards=keys.filter(k=>PPI_CHANGES[k]).map(k=>kpiCardSmall(PPI_SERIES[k].name,k,PPI_CHANGES)).join('');
+    if(!cards) return '';
+    return '<div style="'+lbl+'">'+label+'</div>'+
+      '<div style="display:grid;grid-template-columns:repeat('+(cols||3)+',1fr);gap:10px;margin-bottom:14px">'+cards+'</div>';
+  };
+
+  const html=estimateBanner(PPI_SOURCE,PPI_MONTH,"PPI figures")+buildPPIExecTakeaway()+
+  '<div style="display:grid;grid-template-columns:1.35fr 1fr;gap:24px;align-items:start">'+
+
+  // LEFT
+  '<div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:22px">'+
+      kpiCardLarge('Final Demand (Headline)','ppiHeadline',PPI_CHANGES.ppiHeadline.yoy>4?'hot':'warm',PPI_CHANGES,PPI_DATA)+
+      kpiCardLarge('Core (ex Food &amp; Energy)','ppiCore',(PPI_CHANGES.ppiCore&&PPI_CHANGES.ppiCore.yoy>4)?'hot':'warm',PPI_CHANGES,PPI_DATA)+
+      kpiCardLarge('Final Demand Goods','ppiGoods','cool',PPI_CHANGES,PPI_DATA)+
+      kpiCardLarge('Final Demand Services','ppiServices','cool',PPI_CHANGES,PPI_DATA)+
+    '</div>'+
+
+    grid('Final demand &middot; goods',PPI_GOODS_KEYS,3)+
+    grid('Final demand &middot; services',PPI_SVC_KEYS,3)+
+    grid('Final demand &middot; construction &amp; stable core',['ppiConstr','ppiCoreLessTr'],2)+
+    grid('Intermediate demand &middot; pipeline (upstream)',PPI_ID_KEYS,3)+
+
+    '<div class="ai-box"><div class="ai-box-header"><span class="ai-badge">AI Brief</span>'+
+      '<span class="ai-box-title">Producer-price read</span></div>'+
+      '<div class="ai-content" id="ppiAI"><div class="ai-loading"><div class="spinner" style="width:14px;height:14px"></div>Analyzing&hellip;</div></div></div>'+
+
+    '<div style="'+lbl+'">Tire input cost stack <span class="adj-tag nsa">NSA</span></div>'+
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:6px">'+
+      PPI_DEEP_DIVE.filter(k=>PPI_CHANGES[k]).map(k=>kpiCardSmall(PPI_SERIES[k].name,k,PPI_CHANGES)).join('')+'</div>'+
+    '<div style="font-size:11px;color:var(--muted2);margin-bottom:24px">Deeper tire-input commentary appears in the Industry Lens tab.</div>'+
+  '</div>'+
+
+  // RIGHT
+  '<div>'+
+    '<div class="table-card">'+
+      '<div class="table-card-header"><div><div class="table-card-title">Needle Movers</div>'+
+        '<div class="table-card-sub">Components &amp; tire inputs ranked by &#124;change&#124; &middot; weights omitted</div></div>'+
+        '<div class="tab-pills"><button class="tab-pill active" id="ppineedle-pill-yoy" onclick="switchPPINeedle(\'yoy\')">YoY</button>'+
+        '<button class="tab-pill" id="ppineedle-pill-mom" onclick="switchPPINeedle(\'mom\')">MoM</button></div></div>'+
+      '<table class="data-table"><thead><tr><th></th><th>Series</th><th>12mo</th><th class="r">Chg</th><th class="r"></th></tr></thead>'+
+      '<tbody id="ppineedle-rows">'+buildNeedleRows('yoy',PPI_CHANGES,PPI_SERIES,PPI_AGGS)+'</tbody></table>'+
+    '</div>'+
+  '</div>'+
+  '</div>'+
+
+  '<div class="footnote"><b>Methodology &amp; data notes.</b> Source: U.S. BLS, Producer Price Index, Final Demand&ndash;Intermediate Demand (FD-ID) system. '+
+    'Final demand (headline, core, goods, services, construction), the goods/services components, and intermediate demand (processed, unprocessed, services) are <b>seasonally adjusted (SA)</b> (WPS&hellip; / WPSID&hellip; series). '+
+    'Intermediate demand sits <b>upstream</b> of final demand &mdash; it is an early read on input-cost pressure before it reaches finished producer prices. '+
+    'Tire-input commodity series &mdash; rubber &amp; plastics, synthetic rubber, tires &amp; tubes, passenger-car tires '+
+    '<span class="adj-tag nsa">NSA</span> &mdash; publish <b>not seasonally adjusted (NSA)</b> only; read those on a 12-month (YoY) basis. '+
+    '<b>Weights are intentionally omitted</b> &mdash; every row is shown as a % change (YoY / MoM), not a weighted contribution; the needle table ranks by absolute change.'+
+  '</div>';
+
+  c.innerHTML=html;
+  generatePPIAI();
+}
+
+// ── EXEC TAKEAWAYS (deterministic) ────────────────────────
+function buildExecTakeaway(){
+  const h=CHANGES.headline,c=CHANGES.core; if(!h) return '';
+  const accel=h.mom>h.prevMom;
+  const AGG=new Set(['headline','core','energy','food','shelter']);
+  let top=null,topImp=-1e9;
+  Object.keys(CHANGES).forEach(k=>{if(AGG.has(k))return;const imp=CHANGES[k].yoy*SERIES[k].wt/100;if(imp>topImp){topImp=imp;top=k;}});
+  const en=CHANGES.energy;
+  const enDir=en?(en.yoy>0?'energy is up '+fmtPct(en.yoy)+' YoY':'energy is down '+fmtPct(en.yoy)+' YoY'):'';
+  const pressure=(h.yoy>3||accel)?'building':'easing';
+  return '<div class="exec-takeaway"><div class="et-label">Bottom line</div><div class="et-text">'+
+    'Headline CPI <b>'+fmtPct(h.yoy)+' YoY</b> ('+(accel?'accelerating':'easing')+' month-on-month)'+(c?', core <b>'+fmtPct(c.yoy)+'</b>':'')+'. '+
+    (top?'Largest upward driver: <b>'+SERIES[top].name+'</b>. ':'')+(enDir?enDir.charAt(0).toUpperCase()+enDir.slice(1)+'. ':'')+
+    'Net read for fleet &amp; plant operations: cost pressure <b>'+pressure+'</b>.'+
+    '</div></div>';
+}
+function buildPPIExecTakeaway(){
+  const h=PPI_CHANGES.ppiHeadline; if(!h) return '';
+  const g=PPI_CHANGES.ppiGoods,s=PPI_CHANGES.ppiServices,rub=PPI_CHANGES.ppiSynthRub,tir=PPI_CHANGES.ppiTires;
+  const accel=h.mom>h.prevMom;
+  const pressure=(h.yoy>3||accel)?'building':'easing';
+  return '<div class="exec-takeaway"><div class="et-label">Bottom line</div><div class="et-text">'+
+    'Producer prices <b>'+fmtPct(h.yoy)+' YoY</b> ('+(accel?'accelerating':'easing')+')'+
+    (g&&s?' &mdash; goods '+fmtPct(g.yoy)+', services '+fmtPct(s.yoy):'')+'. '+
+    ((rub||tir)?'Tire inputs: '+(rub?'synthetic rubber <b>'+fmtPct(rub.yoy)+'</b>':'')+(rub&&tir?', ':'')+(tir?'tires <b>'+fmtPct(tir.yoy)+'</b>':'')+' (YoY, NSA). ':'')+
+    'Input-cost pressure <b>'+pressure+'</b>.'+
+    '</div></div>';
+}
+
+// ── TREND CHART HELPERS ───────────────────────────────────
+function momSeries(key,store){store=store||DATA;const a=store[key];if(!a)return[];const out=[];for(let i=a.length-12;i<a.length;i++){if(i<1)continue;out.push(parseFloat(((a[i].value-a[i-1].value)/a[i-1].value*100).toFixed(2)));}return out;}
+function drawLine(canvasId,labels,series,withTarget){
+  const cv=document.getElementById(canvasId);if(!cv)return;
+  const ds=series.filter(s=>s.data&&s.data.length).map(s=>({label:s.label,data:s.data,borderColor:s.color,backgroundColor:s.color+'14',borderWidth:2,fill:false,tension:.3,pointRadius:2,pointBackgroundColor:s.color}));
+  if(withTarget)ds.push({label:'2% target',data:labels.map(()=>2),borderColor:'#3dba7a',borderWidth:1,borderDash:[5,4],fill:false,pointRadius:0});
+  if(chartInstances[canvasId]){try{chartInstances[canvasId].destroy()}catch(e){}}
+  chartInstances[canvasId]=new Chart(cv,{type:'line',data:{labels,datasets:ds},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+c.parsed.y.toFixed(2)+'%'}}},scales:{x:{ticks:{color:'#545d72',font:{size:9},maxRotation:30,autoSkip:true,maxTicksLimit:8},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#545d72',font:{size:9},callback:v=>v.toFixed(1)+'%'},grid:{color:'rgba(255,255,255,.04)'}}}}});
+}
+function drawMoM(canvasId,labels,data){
+  const cv=document.getElementById(canvasId);if(!cv)return;
+  const colors=data.map(v=>v<0?'#3dba7a':v>0.4?'#e05555':'#f0c040');
+  if(chartInstances[canvasId]){try{chartInstances[canvasId].destroy()}catch(e){}}
+  chartInstances[canvasId]=new Chart(cv,{type:'bar',data:{labels,datasets:[{data:data,backgroundColor:colors,borderRadius:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.parsed.y.toFixed(2)+'%'}}},scales:{x:{ticks:{color:'#545d72',font:{size:9},maxRotation:30,autoSkip:true,maxTicksLimit:8},grid:{display:false}},y:{ticks:{color:'#545d72',font:{size:9},callback:v=>v.toFixed(1)+'%'},grid:{color:'rgba(255,255,255,.04)'}}}}});
+}
+function drawSpark(canvasId,arr,color){
+  const cv=document.getElementById(canvasId);if(!cv||!arr||!arr.length)return;
+  if(chartInstances[canvasId]){try{chartInstances[canvasId].destroy()}catch(e){}}
+  chartInstances[canvasId]=new Chart(cv,{type:'line',data:{labels:arr.map((_,i)=>i),datasets:[{data:arr,borderColor:color,backgroundColor:color+'1f',borderWidth:1.5,fill:true,tension:.3,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}});
+}
+function sparkCardHTML(key,seriesMap,changes,store,prefix){
+  const ch=changes[key],m=seriesMap[key];
+  const badge=ch.yoy<0?'green':ch.yoy>10?'red':ch.yoy>5?'orange':'blue';
+  const rr=ann3(key,store);
+  return '<div class="spark-card"><div class="spark-header"><div><div class="spark-name">'+m.name+(m.adj==='NSA'?' <span class="adj-tag nsa">NSA</span>':'')+'</div><div class="spark-cat">'+m.cat+'</div></div>'+
+    '<div class="spark-badge '+badge+'">'+fmtPct(ch.yoy)+'</div></div>'+
+    '<div class="spark-canvas-wrap"><canvas id="'+prefix+key+'"></canvas></div>'+
+    '<div class="spark-stats"><div><div class="spark-stat-label">MoM</div><div class="spark-stat-val">'+fmtPct(ch.mom)+'</div></div>'+
+    '<div><div class="spark-stat-label">3mo ann.</div><div class="spark-stat-val">'+(rr!=null?fmtPct(rr):'&mdash;')+'</div></div></div></div>';
+}
+
+// ── 12-MONTH TRENDS (CPI charts + CPI sparklines + PPI) ───
+function renderTrend(){
+  const el=document.getElementById('trendContent');
+  if(!CHANGES.headline){el.innerHTML='<div class="empty-state">No data.</div>';return;}
+  const labels=DATA.headline.slice(-12).map(d=>d.label);
+  const cpiSparks=DEEP_DIVE.filter(k=>CHANGES[k]&&DATA[k]).map(k=>sparkCardHTML(k,SERIES,CHANGES,DATA,'sp-')).join('');
+  const hasPPI=!!PPI_CHANGES.ppiHeadline;
+  const ppiSparks=hasPPI?PPI_DEEP_DIVE.filter(k=>PPI_CHANGES[k]&&PPI_DATA[k]).map(k=>sparkCardHTML(k,PPI_SERIES,PPI_CHANGES,PPI_DATA,'ppisp-')).join(''):'';
+  const lbl='font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:8px 0 14px';
+  el.innerHTML=
+    '<div class="chart-card"><div class="chart-card-header"><div class="chart-title">CPI &mdash; Headline vs Core, 12-Month YoY</div>'+
+      '<div class="chart-legend"><span class="legend-item"><span class="legend-line" style="background:#f0c040"></span>Headline</span>'+
+      '<span class="legend-item"><span class="legend-line" style="background:#4a9eff"></span>Core</span>'+
+      '<span class="legend-item"><span class="legend-line" style="background:#3dba7a"></span>2% target</span></div></div>'+
+      '<div class="chart-wrap"><canvas id="trendChart"></canvas></div></div>'+
+    '<div class="chart-card"><div class="chart-card-header"><div class="chart-title">CPI &mdash; Headline Month-over-Month</div></div>'+
+      '<div class="chart-wrap" style="height:200px"><canvas id="momChart"></canvas></div></div>'+
+    '<div style="'+lbl+'">CPI component detail &middot; 13-month index history</div>'+
+    '<div class="spark-grid">'+cpiSparks+'</div>'+
+    (hasPPI?
+      '<div style="'+lbl+';margin-top:24px;color:var(--accent)">Producer Price Index</div>'+
+      '<div class="chart-card"><div class="chart-card-header"><div class="chart-title">PPI &mdash; Final Demand: Headline / Goods / Services, 12-Month YoY</div>'+
+        '<div class="chart-legend"><span class="legend-item"><span class="legend-line" style="background:#f0c040"></span>Headline</span>'+
+        '<span class="legend-item"><span class="legend-line" style="background:#f07840"></span>Goods</span>'+
+        '<span class="legend-item"><span class="legend-line" style="background:#4a9eff"></span>Services</span></div></div>'+
+        '<div class="chart-wrap"><canvas id="ppiTrendChart"></canvas></div></div>'+
+      '<div style="'+lbl+'">Tire-input commodities <span class="adj-tag nsa">NSA</span> &middot; 13-month index history</div>'+
+      '<div class="spark-grid">'+ppiSparks+'</div>'
+      :'')+
+    '<div class="footnote"><b>SA vs NSA.</b> CPI series and PPI Final-Demand aggregates are seasonally adjusted; tire-input commodity series are not seasonally adjusted (<span class="adj-tag nsa">NSA</span>), so their 12-month (YoY) trend is the comparable read. Sparklines show raw index levels.</div>';
+  requestAnimationFrame(()=>{
+    drawLine('trendChart',labels,[
+      {label:'Headline',data:computeYoYSeries('headline'),color:'#f0c040'},
+      {label:'Core',data:computeYoYSeries('core'),color:'#4a9eff'}],true);
+    drawMoM('momChart',labels,momSeries('headline',DATA));
+    DEEP_DIVE.filter(k=>DATA[k]).forEach(k=>drawSpark('sp-'+k,DATA[k].slice(-13).map(d=>d.value),CHANGES[k].yoy<0?'#3dba7a':CHANGES[k].yoy>8?'#e05555':'#4a9eff'));
+    if(hasPPI){
+      const pl=PPI_DATA.ppiHeadline.slice(-12).map(d=>d.label);
+      drawLine('ppiTrendChart',pl,[
+        {label:'Headline',data:computeYoYSeries('ppiHeadline',PPI_DATA),color:'#f0c040'},
+        {label:'Goods',data:computeYoYSeries('ppiGoods',PPI_DATA),color:'#f07840'},
+        {label:'Services',data:computeYoYSeries('ppiServices',PPI_DATA),color:'#4a9eff'}],false);
+      PPI_DEEP_DIVE.filter(k=>PPI_DATA[k]).forEach(k=>drawSpark('ppisp-'+k,PPI_DATA[k].slice(-13).map(d=>d.value),PPI_CHANGES[k].yoy<0?'#3dba7a':PPI_CHANGES[k].yoy>8?'#e05555':'#4a9eff'));
+    }
+  });
+}
+
+// ── INDUSTRY LENS ─────────────────────────────────────────
+function buildWatchList(){
+  const items=[];const seen=new Set();
+  Object.keys(CHANGES).forEach(k=>{
+    if(k==='headline'||seen.has(k))return;
+    const ch=CHANGES[k],rr=ann3(k);const accel=ch.mom-ch.prevMom;
+    let icon,reason,alert=false;
+    if(rr!==null&&rr>ch.yoy+2&&rr>3){icon='&#9650;';reason='3-mo run-rate ('+fmtPct(rr)+') running above its 12-mo trend';alert=true;}
+    else if(ch.yoy>8){icon='&#9888;';reason='Elevated year-over-year pressure';alert=true;}
+    else if(accel>0.35){icon='&#9650;';reason='Accelerating month-on-month (+'+accel.toFixed(2)+'pp vs prior month)';alert=true;}
+    else if(ch.yoy<0&&ch.mom>0.1){icon='&#8635;';reason='Turning up from negative territory';}
+    else return;
+    seen.add(k);
+    items.push({k,icon,reason,alert,yoy:ch.yoy,rr});
+  });
+  items.sort((a,b)=>((b.rr==null?b.yoy:b.rr))-((a.rr==null?a.yoy:a.rr)));
+  const top=items.slice(0,8);
+  if(!top.length)return '<div class="empty-state" style="padding:20px">No components currently flagged &mdash; momentum is broadly stable this month.</div>';
+  return top.map(it=>{
+    const rrCol=(it.rr!=null&&it.rr>it.yoy)?'var(--red)':'var(--green)';
+    return '<div class="watch-item'+(it.alert?' alert':'')+'">'+
+      '<span class="watch-icon">'+it.icon+'</span>'+
+      '<div class="watch-body"><div class="watch-name">'+SERIES[it.k].name+'</div><div class="watch-reason">'+it.reason+'</div></div>'+
+      '<div class="watch-stat"><div class="watch-change" style="color:'+(it.yoy<0?'var(--green)':'var(--text)')+'">'+fmtPct(it.yoy)+'</div><div class="watch-prev">YoY</div></div>'+
+      '<div class="watch-runrate"><div class="watch-rr-label">3mo ann.</div><div class="watch-rr-val" style="color:'+rrCol+'">'+(it.rr!=null?fmtPct(it.rr):'&mdash;')+'</div></div>'+
+    '</div>';
+  }).join('');
+}
+function renderLens(){
+  const el=document.getElementById('lensContent');
+  if(!CHANGES.headline){el.innerHTML='<div class="empty-state">No data.</div>';return;}
+  const hasPPI=!!PPI_CHANGES.ppiHeadline;
+  const ppiCards=hasPPI?PPI_DEEP_DIVE.filter(k=>PPI_CHANGES[k]).map(k=>kpiCardSmall(PPI_SERIES[k].name,k,PPI_CHANGES)).join(''):'';
+  el.innerHTML=
+    '<div class="ai-box"><div class="ai-box-header"><span class="ai-badge">AI Brief</span><span class="ai-box-title">Consumer-side cost exposure (CPI)</span></div>'+
+      '<div class="ai-content" id="lensAI"><div class="ai-loading"><div class="spinner" style="width:14px;height:14px"></div>Analyzing&hellip;</div></div></div>'+
+    (hasPPI?
+      '<div style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:6px 0 12px">Producer-side input costs <span class="adj-tag nsa">NSA</span></div>'+
+      '<div class="tire-grid" style="grid-template-columns:repeat(4,1fr)">'+ppiCards+'</div>'+
+      '<div class="ai-box" style="padding:16px 18px;margin-bottom:24px"><div class="ai-content" id="ppiLensAI"><div class="ai-loading"><div class="spinner" style="width:12px;height:12px"></div>Analyzing input-cost trajectory&hellip;</div></div></div>'
+      :'')+
+    '<div style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:6px 0 12px">Tire &amp; auto intelligence (CPI)</div>'+
+    '<div class="tire-grid" style="grid-template-columns:repeat(4,1fr)">'+
+      kpiCardSmall('MV Maint. &amp; Repair','mvmaint',CHANGES)+kpiCardSmall('New Vehicles','newveh',CHANGES)+
+      kpiCardSmall('Used Cars &amp; Trucks','usedveh',CHANGES)+kpiCardSmall('MV Insurance','mvins',CHANGES)+'</div>'+
+    '<div class="ai-box" style="padding:16px 18px;margin-bottom:24px"><div class="ai-content" id="tireAI"><div class="ai-loading"><div class="spinner" style="width:12px;height:12px"></div>Analyzing tire &amp; auto channel&hellip;</div></div></div>'+
+    '<div class="table-card"><div class="table-card-header"><div><div class="table-card-title">Momentum &amp; Early Warnings</div>'+
+      '<div class="table-card-sub">Flagged components with their 3-month annualized run-rate beside the 12-month trend</div></div></div>'+
+      '<div style="padding:16px 18px"><div class="watch-list">'+buildWatchList()+'</div></div></div>'+
+    '<div class="footnote"><b>Run-rate</b> = the latest index annualized over the trailing 3 months ((v&#8348; / v&#8348;&#8331;&#8323;)<sup>4</sup> &minus; 1). A run-rate above the 12-month YoY flags building momentum; below it flags cooling. CPI is seasonally adjusted; PPI tire inputs are NSA, so their cards read on a YoY basis.</div>';
+  generateLensAI(); generateTireAI(); if(hasPPI) generatePPILensAI();
+}
+
+// ── FED RESEARCH LINKS (static; the shared build makes no per-user API calls) ──
+function renderFedArticles(){
+  const container=document.getElementById('fedArticlesContainer'); if(!container) return;
+  let html='<div class="articles-card"><div class="articles-card-header"><div>'+
+    '<div class="articles-card-title">Fed Research &amp; Commentary</div>'+
+    '<div class="articles-card-sub">Reserve Bank research feeds</div></div></div>';
+  FED_FEEDS.forEach(f=>{
+    html+='<div class="feed-block"><div class="feed-name">'+
+      '<a class="article-link" href="'+f.url+'" target="_blank" rel="noopener">'+f.name+' &rarr;</a></div></div>';
+  });
+  html+='</div>';
+  container.innerHTML=html;
+}
+// ── AI COMMENTARY (tightened, tire-ops framing) ───────────
+function formatAIText(t){
+  const lines=t.split('\n').map(l=>l.trim()).filter(Boolean);
+  return lines.map(l=>{
+    l=l.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
+    if(/^[\u2022\-\*]\s/.test(l)) return '<p style="padding-left:14px;text-indent:-12px">&#8226; '+l.replace(/^[\u2022\-\*]\s/,'')+'</p>';
+    return '<p>'+l+'</p>';
+  }).join('');
+}
+// Commentary is OPTIONAL. When present it is baked into data.json server-side as
+// data.commentary[<cacheKey>], so the shared page needs no browser API key. If a
+// given commentary block is absent, the slot is hidden cleanly (never spins).
+async function callClaudeText(system,user,elId,cacheKey,max_tokens){
+  const el=document.getElementById(elId); if(!el) return;
+  const txt=(RAW&&RAW.commentary&&cacheKey)?RAW.commentary[cacheKey]:null;
+  if(txt){ el.style.display=''; el.innerHTML=formatAIText(txt); return; }
+  el.innerHTML=''; el.style.display='none';
+}
+function buildSnapshot(){
+  const pick=['headline','core','energy','gasoline','food','foodhome','shelter','electricity','natgas','newveh','usedveh','mvins','airline','mvmaint'];
+  return pick.filter(k=>CHANGES[k]).map(k=>SERIES[k].name+' '+fmtPct(CHANGES[k].yoy)+' YoY / '+fmtPct(CHANGES[k].mom)+' MoM').join('; ')+'.';
+}
+function buildPPISnapshot(){
+  return Object.keys(PPI_CHANGES).map(k=>PPI_SERIES[k].name+' '+fmtPct(PPI_CHANGES[k].yoy)+' YoY / '+fmtPct(PPI_CHANGES[k].mom)+' MoM'+(PPI_SERIES[k].adj==='NSA'?' (NSA)':'')).join('; ')+'.';
+}
+const NEUTRAL_CTX='Audience: an informed reader of an economics briefing. Write in neutral, matter-of-fact language so the reader can draw their own conclusions. Plain business English, no preamble, never restate the question. State what the data shows; do not give recommendations or editorialize in the main text. After the main text, end with exactly ONE bullet that begins "\u2022 Tire industry:" noting the single most relevant implication for a tire & transportation-equipment manufacturer.';
+function generateHeadlineCoreAI(){
+  callClaudeText(
+    'You are a macro analyst. '+NEUTRAL_CTX+' Lead with ONE plain sentence on the headline-and-core read, then at most 2 short factual follow-on points, then the single tire bullet.',
+    'CPI for '+REPORT_MONTH+'. '+buildSnapshot()+' Summarize the headline-and-core picture factually.',
+    'hcAI','hc2',260);
+}
+function generateMfgAI(){
+  callClaudeText(
+    'You are a cost analyst. '+NEUTRAL_CTX+' At most 3 factual sentences on what these components show, then the single tire bullet.',
+    'Energy & goods cost components for '+REPORT_MONTH+': Electricity '+fmtPct(CHANGES.electricity?.yoy||0)+', Natural Gas '+fmtPct(CHANGES.natgas?.yoy||0)+', Food at Home '+fmtPct(CHANGES.foodhome?.yoy||0)+', HH Furnishings '+fmtPct(CHANGES.hhfurnish?.yoy||0)+' (all YoY). Describe the movement factually.',
+    'mfgAI','mfg2',220);
+}
+function generateTransportAI(){
+  callClaudeText(
+    'You are a logistics cost analyst. '+NEUTRAL_CTX+' At most 3 factual sentences, then the single tire bullet.',
+    'Transportation cost components for '+REPORT_MONTH+': Gasoline '+fmtPct(CHANGES.gasoline?.yoy||0)+', Fuel Oil '+fmtPct(CHANGES.fueloil?.yoy||0)+', Airline Fares '+fmtPct(CHANGES.airline?.yoy||0)+', MV Insurance '+fmtPct(CHANGES.mvins?.yoy||0)+' (YoY). Describe the movement factually.',
+    'transpAI','transp2',220);
+}
+function generateFedAI(){
+  const h=CHANGES.headline,c=CHANGES.core;
+  callClaudeText(
+    'You are a Fed-policy analyst. '+NEUTRAL_CTX+' At most 3 factual sentences on what the data implies for Fed posture and rate direction; no politics, no predictions stated as certainty. Then the single tire bullet.',
+    'Headline CPI '+fmtPct(h.yoy)+' YoY ('+(h.yoy-2>=0?'+':'')+(h.yoy-2).toFixed(2)+'pp vs 2% target), core '+(c?fmtPct(c.yoy):'n/a')+', headline MoM '+fmtPct(h.mom)+'. Read the policy signal factually.',
+    'fedAI','fed2',220);
+}
+function generateLensAI(){
+  callClaudeText(
+    'You are an economics analyst. '+NEUTRAL_CTX+' Use at most 3 factual bullets (start each with \u2022) describing where consumer-side price pressure is landing, then the single "\u2022 Tire industry:" bullet last.',
+    'CPI snapshot for '+REPORT_MONTH+'. '+buildSnapshot()+' Summarize where price pressure is concentrated.',
+    'lensAI','lens2',360);
+}
+function generateTireAI(){
+  callClaudeText(
+    'You are an automotive-sector analyst. '+NEUTRAL_CTX+' Describe the auto/tire CPI channel factually in at most 3 bullets (start each with \u2022), then the single "\u2022 Tire industry:" bullet last.',
+    'Auto & tire CPI channel for '+REPORT_MONTH+': MV Maint '+fmtPct(CHANGES.mvmaint?.yoy||0)+', New Vehicles '+fmtPct(CHANGES.newveh?.yoy||0)+', Used Vehicles '+fmtPct(CHANGES.usedveh?.yoy||0)+', MV Insurance '+fmtPct(CHANGES.mvins?.yoy||0)+' (YoY). Read the channel factually.',
+    'tireAI','tire2',320);
+}
+function generatePPIAI(){
+  callClaudeText(
+    'You are a producer-price analyst. '+NEUTRAL_CTX+' Lead with ONE plain sentence on final demand, then at most 2 factual points (cover goods vs services and, where relevant, the upstream intermediate-demand signal). Note that tire-input commodity series are NSA, so cite them YoY. End with the single tire bullet.',
+    'PPI for '+PPI_MONTH+'. '+buildPPISnapshot()+' Summarize the producer-price picture factually, including the intermediate-demand (pipeline) read.',
+    'ppiAI','ppi2',300);
+}
+function generatePPILensAI(){
+  callClaudeText(
+    'You are a raw-materials analyst. '+NEUTRAL_CTX+' Describe the tire-input cost stack factually in at most 3 bullets (start each with \u2022); cite NSA tire inputs on a YoY basis. End with the single "\u2022 Tire industry:" bullet.',
+    'PPI tire-input cost stack for '+PPI_MONTH+': '+PPI_DEEP_DIVE.filter(k=>PPI_CHANGES[k]).map(k=>PPI_SERIES[k].name+' '+fmtPct(PPI_CHANGES[k].yoy)+' YoY').join('; ')+'. Describe where rubber, tire and plastics input costs sit factually.',
+    'ppiLensAI','ppilens2',360);
+}
+
+// ── INIT ──────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded',()=>{ loadAllData(); });
+</script>
+</body>
+</html>
