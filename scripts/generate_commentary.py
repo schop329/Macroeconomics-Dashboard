@@ -25,6 +25,7 @@ import json
 import os
 import sys
 import time
+import hashlib
 import urllib.request
 from datetime import datetime, timezone
 
@@ -211,6 +212,17 @@ def set_code(d, code):
         warn("could not write status: %s" % e)
 
 
+def data_fingerprint(cpi, ppi):
+    """Stable hash of the CPI+PPI figures the commentary depends on.
+
+    fed_funds is intentionally excluded — no commentary slot uses it, so a FRED
+    change should not trigger (paid) regeneration. Any change to a CPI/PPI value
+    or a new monthly release changes this hash and forces a refresh.
+    """
+    blob = json.dumps({"cpi": cpi, "ppi": ppi}, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+
+
 def main():
     try:
         d = load_data()
@@ -236,6 +248,19 @@ def main():
         set_code(d, 703)
         return 0
 
+    # Change detection: only spend on the API when the CPI/PPI numbers actually
+    # moved. The fingerprint of the data the existing commentary was generated
+    # from is stored at commentary["_source"], which fetch_data.py carries forward
+    # across runs. If it matches the current data, keep the existing blurbs and
+    # make zero API calls.
+    current_hash = data_fingerprint(d.get("cpi", {}), d.get("ppi", {}))
+    existing = d.get("commentary") or {}
+    has_all_slots = all(k in existing for k, _, _, _ in build_prompts(ch, pch, "", ""))
+    if existing.get("_source") == current_hash and has_all_slots:
+        print("SKIP commentary: CPI/PPI unchanged since last generation (no API calls). "
+              "fingerprint=%s" % current_hash[:12])
+        return 0
+
     prompts = build_prompts(ch, pch, d.get("report_month", ""), d.get("ppi_month", ""))
     commentary = {}
     ok = 0
@@ -256,6 +281,8 @@ def main():
         set_code(d, 702)
         return 0
 
+    # Stamp the fingerprint so unchanged future runs skip regeneration.
+    commentary["_source"] = current_hash
     d["commentary"] = commentary
     d.setdefault("status", {})["commentary_error_code"] = None
     d["status"]["commentary_generated_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -265,8 +292,9 @@ def main():
         warn("could not write commentary: %s" % e)
         return 0
 
+    slot_names = [k for k in commentary if not k.startswith("_")]
     print("OK commentary: %d/%d slots written -> %s"
-          % (ok, len(prompts), ", ".join(commentary.keys())))
+          % (ok, len(prompts), ", ".join(slot_names)))
     return 0
 
 
